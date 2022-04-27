@@ -20,7 +20,7 @@ sudo -u mc-server screen -p 0 -S mc -X eval 'stuff "say サーバーをあと1�
 sleep 60
 sudo -u mc-server screen -p 0 -S mc -X eval 'stuff "say ワールドセーブ後再起動されます \015"'
 
-sysytemctl stop mc
+systemctl stop mc
 
 sleep 60
 
