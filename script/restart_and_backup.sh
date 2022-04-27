@@ -1,36 +1,62 @@
 #!/bin/bash
 
-# === 設定 ===
-# サーバ終了までの待ち時間
-WAIT=60
-# サーバ起動スクリプト
-# (start.shの配置場所)
-STARTSCRIPT=/var/sh/server.sh
-# screenの名前
-SCREEN_NAME='ikazuchi-server'
-# バックアップ先のディレクトリ
-BACKUP_DIR='/backup/mcserver'
-# バックアップするディレクトリ(マイクラ鯖のディレクトリ)
-BACKUP_MCSERVER='/var/mc-serve'
-# ============
+# サーバーパス
+MC_PATH='/home/mc-server/mc'
+# バックアップ収納パス
+BK_PATH='/home/mc-server/backup'
+# バックアップ時刻形式
+BK_TIME=`date +%Y%m%d-%H%M%S`
+# バックアップファイル名
+BK_NAME="${BK_PATH}/mc_backup_${BK_TIME}.tar.gz"
+# バックアップ保存世代数
+BK_GEN="3"
+TAIL_GEN="+4"
 
-screen -p 0 -S ${SCREEN_NAME} -X eval 'stuff "say '${WAIT}'秒後にサーバーを再起動します\015"'
-screen -p 0 -S ${SCREEN_NAME} -X eval 'stuff "say すぐに再接続可能になるので、しばらくお待ち下さい\015"'
+sudo -u mc-server screen -p 0 -S mc -X eval 'stuff "say サーバーをあと5分後に再起動します。 \015"'
+sleep 120
+sudo -u mc-server screen -p 0 -S mc -X eval 'stuff "say サーバーをあと3分後に再起動します。 \015"'
+sleep 120
+sudo -u mc-server screen -p 0 -S mc -X eval 'stuff "say サーバーをあと1分後に再起動します。 \015"'
+sleep 60
+sudo -u mc-server screen -p 0 -S mc -X eval 'stuff "say ワールドセーブ後再起動されます \015"'
 
-sleep $WAIT
-screen -p 0 -S ${SCREEN_NAME} -X eval 'stuff "stop\015"'
-sleep 30
-# バックアップ処理 ->
+systemctl stop mc
 
-# TODO: バックアップ処理を書く
+sleep 60
 
+#===============================================================
+# backup
 
-# <- ここまでバックアップ処理
-# screen -listの結果から${SCREEN_NAME}が含まれるものを抽出し、空になるまでループ(結果、全て終了するまで待つ事になる)
-while [ -n "$(screen -list | grep -o "${SCREEN_NAME}")" ]
-do
-  # 空回り防止
-  sleep 1
-done
+      tar cfvz $BK_NAME $MC_PATH
+      sleep 120s
+      # 過去世代の削除
+      ## ディレクトリの存在チェック
+      if [ -d $BK_PATH ]; then
+        # バックアップディレクトリが存在している場合、
+        # 格納されているファイル一覧を表示
+        ls -lrth $BK_PATH
+      else
+        echo "The backup directory (${BK_PATH}) doesn't exist !"
+        eval $IS_TIME
+      fi
 
-sh $STARTSCRIPT
+      # バックアップファイルをローカルのバックアップフォルダで世代管理
+      TGT_FILE="${BK_PATH}/mc_backup_????????-??????.tar.gz"
+      CHK_GEN=$(ls -1 ${TGT_FILE}|wc -l)
+
+      # 削除対象ファイルリスト
+      DEL_LIST=$(ls -1 -t ${TGT_FILE}|tail -n ${TAIL_GEN})
+
+      ## ファイル削除要否判定
+      if [[ ${CHK_GEN} -gt $BK_GEN ]]; then
+          # バックアップファイル数が保管世代数より多い場合、
+          # 最新の保存数のみ残しそれ以外を削除する
+          rm -f ${BK_PATH}/${DEL_LIST}
+          eval $IS_TIME
+      else
+          echo "There is no old backup files to delete"
+          eval $IS_TIME
+      fi
+    
+#===============================================================
+systemctl start mc
