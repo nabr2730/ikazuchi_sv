@@ -27,12 +27,8 @@ sleep 60
 #===============================================================
 # backup
 
-tar cfvz /home/mc-server/backup /home/mc-server/mc/
-
-sleep 60
-
       tar cfvz $BK_NAME $MC_PATH
-      sleep 60s
+      sleep 120s
       # 過去世代の削除
       ## ディレクトリの存在チェック
       if [ -d $BK_PATH ]; then
